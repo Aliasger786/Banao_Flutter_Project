@@ -1,8 +1,12 @@
+import 'dart:convert';
+
+import 'package:banao_flutter_task/Lesson.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:persistent_bottom_nav_bar/persistent_tab_view.dart';
-
+import 'package:http/http.dart' as http;
 import 'MyArticles.dart';
+import 'Program.dart';
 import 'SelectCard.dart';
 
 class HomePage extends StatelessWidget {
@@ -56,15 +60,27 @@ class HomePage extends StatelessWidget {
               ),
               Container(
                   margin: EdgeInsets.symmetric(vertical: 20.0),
-                  height: 330,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: [
-                      MyArticles('assets/images/im1.jpg', 'LIFESTYLE', 'A complete guide for your new born baby','16 lessons','',''),
-                      MyArticles('assets/images/im2.jpg', 'LIFESTYLE', 'A complete guide for your new born baby','16 lessons','',''),
-                      MyArticles('assets/images/im1.jpg', 'LIFESTYLE', 'A complete guide for your new born baby','16 lessons','',''),
-                    ],
-                  )
+                  height: 310,
+                  child: FutureBuilder<List<Program>>(
+                    future: fetchData("https://632017e19f82827dcf24a655.mockapi.io/api/programs"),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData) {
+                        return ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          physics: ClampingScrollPhysics(),
+                          shrinkWrap: true,
+                          itemCount: snapshot.data!.length,
+                          itemBuilder: (context, index) {
+                            return
+                              MyArticles('assets/images/im1.jpg', snapshot.data![index].category.toString(), snapshot.data![index].name.toString(),'${snapshot.data![index].lesson.toString()} lessons','','');
+                          },
+                        );
+                      } else if (snapshot.hasError) {
+                        return Text('${snapshot.error}');
+                      }
+                      return const CircularProgressIndicator();
+                    },
+                  ),
               ),
               SizedBox(height: 15.0),
               Padding(padding: EdgeInsets.only(left: 9.0,right: 14.0),
@@ -110,14 +126,29 @@ class HomePage extends StatelessWidget {
               ),
               Container(
                   margin: EdgeInsets.symmetric(vertical: 20.0),
-                  height: 330,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: [
-                      MyArticles('assets/images/im1.jpg', 'BABYCARE', 'Understanding of human behaviour','3 min','display',''),
-                      MyArticles('assets/images/im1.jpg', 'BABYCARE', 'Understanding of human behaviour','3 min','display',''),
-                      MyArticles('assets/images/im1.jpg', 'BABYCARE', 'Understanding of human behaviour','3 min','display',''),
-                    ],
+                  height: 340,
+                  child: FutureBuilder<List<Lesson>>(
+                    future: fetchData1('https://632017e19f82827dcf24a655.mockapi.io/api/lessons'),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData) {
+                        return ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          physics: ClampingScrollPhysics(),
+                          shrinkWrap: true,
+                          itemCount: snapshot.data!.length,
+                          itemBuilder: (context, index) {
+                            String name = snapshot.data![index].name.toString();
+                            return
+                              MyArticles('assets/images/im2.jpg', snapshot.data![index].category.toString(), (name.length >= 25 ?
+                              name.substring(0,25) : name
+                              ),'${snapshot.data![index].duration.toString()} min','display','');
+                          },
+                        );
+                      } else if (snapshot.hasError) {
+                        return Text('${snapshot.error}');
+                      }
+                      return const CircularProgressIndicator();
+                    },
                   )
               )
             ]
@@ -132,3 +163,23 @@ const List<Choice> choices = <Choice>[
   const Choice(title: 'Learn     ', icon: Icons.menu_book),
   const Choice(title: 'DD Tracker', icon: Icons.track_changes_outlined)
 ];
+
+Future<List<Program>> fetchData(String url) async {
+  final response = await http.get(Uri.parse(url));
+  if (response.statusCode == 200) {
+    final List result = json.decode(response.body)['items'];
+    return result.map((e) => Program.fromJson(e)).toList();
+  } else {
+    throw Exception('Failed to load data');
+  }
+}
+
+Future<List<Lesson>> fetchData1(String url) async {
+  final response = await http.get(Uri.parse(url));
+  if (response.statusCode == 200) {
+    final List result = json.decode(response.body)['items'];
+    return result.map((e) => Lesson.fromJson(e)).toList();
+  } else {
+    throw Exception('Failed to load data');
+  }
+}
